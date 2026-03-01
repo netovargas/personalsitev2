@@ -100,7 +100,7 @@ def build_config() -> SiteConfig:
         content_dir=root_dir / "content",
         templates_dir=root_dir / "templates",
         assets_dir=root_dir / "assets",
-        output_dir=root_dir / "site",
+        output_dir=root_dir / "docs",
         site_title=site_title,
         base_url=base_url,
     )
