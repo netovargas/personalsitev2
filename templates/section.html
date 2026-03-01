@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+  <h1>{{ section.label }}</h1>
+  {% if section.description %}
+  <p class="section-description">{{ section.description }}</p>
+  {% endif %}
+
+  {% if items %}
+    {% for item in items %}
+    <article class="post-card" id="{{ item.slug }}">
+      <header>
+        <h2>{{ item.title }}</h2>
+        <p class="meta">{{ item.date_display }}</p>
+        {% if item.summary %}
+        <p class="summary">{{ item.summary }}</p>
+        {% endif %}
+        {% if item.external_url %}
+        <p class="external-link"><a href="{{ item.external_url }}" rel="noopener noreferrer" target="_blank">Visit resource</a></p>
+        {% endif %}
+      </header>
+
+      <div class="prose">{{ item.rendered_html | safe }}</div>
+
+      {% if item.tags %}
+      <ul class="tag-list">
+        {% for tag in item.tags %}
+        <li>{{ tag }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </article>
+    {% endfor %}
+  {% else %}
+    <p>No entries yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

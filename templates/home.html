@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="home-intro">
+  <h1>{{ home.title }}</h1>
+  <div class="prose">{{ home.rendered_html | safe }}</div>
+</section>
+
+<section>
+  <h2>Explore</h2>
+  <div class="card-grid">
+    {% for section in sections %}
+    <article class="card">
+      <h3><a href="{{ url(section.path) }}">{{ section.label }}</a></h3>
+      <p>{{ section.description }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
