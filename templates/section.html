@@ -11,8 +11,18 @@
     {% for item in items %}
     <article class="post-card" id="{{ item.slug }}">
       <header>
+        {% if section.name == "reads" and item.read_path %}
+        <h2><a href="{{ url(item.read_path) }}">{{ item.title }}</a></h2>
+        {% else %}
         <h2>{{ item.title }}</h2>
-        <p class="meta">{{ item.date_display }}</p>
+        {% endif %}
+        {% if item.subtitle %}
+        <p class="subtitle">{{ item.subtitle }}</p>
+        {% endif %}
+        <p class="meta">
+          {{ item.date_display }}
+          {% if item.author %}&middot; by {{ item.author }}{% endif %}
+        </p>
         {% if item.summary %}
         <p class="summary">{{ item.summary }}</p>
         {% endif %}
@@ -21,7 +31,14 @@
         {% endif %}
       </header>
 
+      {% if section.name == "reads" %}
+      <p class="read-preview">{{ item.preview_text }}</p>
+      {% if item.read_path %}
+      <p class="read-more"><a href="{{ url(item.read_path) }}">Read full article</a></p>
+      {% endif %}
+      {% else %}
       <div class="prose">{{ item.rendered_html | safe }}</div>
+      {% endif %}
 
       {% if item.tags %}
       <ul class="tag-list">

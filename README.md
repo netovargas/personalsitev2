@@ -11,6 +11,7 @@ Generated output (under `docs/`):
 - `index.html` (home)
 - `posts/index.html`
 - `reads/index.html`
+- `reads/<slug>/index.html` (full read pages)
 - `projects/index.html`
 - `links/index.html`
 - `assets/style.css`
@@ -87,6 +88,8 @@ Each markdown file must start with YAML front matter:
 ```md
 ---
 title: Example Title
+subtitle: Optional subtitle
+author: Optional author
 date: 2026-03-01
 summary: Optional short summary
 tags: [one, two]
@@ -106,10 +109,18 @@ Required fields:
 Optional fields:
 
 - `summary` (string)
+- `subtitle` (string)
+- `author` (string)
 - `tags` (list of strings)
 - `draft` (boolean)
-- `slug` (string)
+- `slug` (string; if omitted, generated from filename)
 - `external_url` (string, useful in `links`)
+
+### Reads behavior
+
+- The `reads` page renders a preview for each read.
+- Each read title links to its full page at `reads/<slug>/index.html`.
+- `subtitle` and `author` are displayed on the reads list and full read page when present.
 
 ## Adding content
 

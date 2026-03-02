@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article class="read-detail" id="{{ item.slug }}">
+  <p class="back-link"><a href="{{ url('reads/') }}">&larr; Back to Reads</a></p>
+  <header>
+    <h1>{{ item.title }}</h1>
+    {% if item.subtitle %}
+    <p class="subtitle">{{ item.subtitle }}</p>
+    {% endif %}
+    <p class="meta">
+      {{ item.date_display }}
+      {% if item.author %}&middot; by {{ item.author }}{% endif %}
+    </p>
+    {% if item.summary %}
+    <p class="summary">{{ item.summary }}</p>
+    {% endif %}
+  </header>
+
+  <div class="prose">{{ item.rendered_html | safe }}</div>
+
+  {% if item.tags %}
+  <ul class="tag-list">
+    {% for tag in item.tags %}
+    <li>{{ tag }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</article>
+{% endblock %}

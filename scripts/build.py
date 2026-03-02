@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import html
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -61,13 +63,17 @@ class SiteConfig:
 class ContentItem:
     source_path: Path
     title: str
+    subtitle: str
+    author: str
     date: dt.date
     date_display: str
     summary: str
+    preview_text: str
     tags: list[str]
     draft: bool
     slug: str
     external_url: str | None
+    read_path: str | None
     body_markdown: str
     rendered_html: str
 
@@ -228,6 +234,18 @@ def validate_content_metadata(metadata: dict[str, Any], source_path: Path) -> di
     if not isinstance(summary, str):
         raise BuildError(f"{source_path}: summary must be a string")
 
+    subtitle = metadata.get("subtitle", "")
+    if subtitle is None:
+        subtitle = ""
+    if not isinstance(subtitle, str):
+        raise BuildError(f"{source_path}: subtitle must be a string")
+
+    author = metadata.get("author", "")
+    if author is None:
+        author = ""
+    if not isinstance(author, str):
+        raise BuildError(f"{source_path}: author must be a string")
+
     tags = metadata.get("tags", [])
     if tags is None:
         tags = []
@@ -240,9 +258,12 @@ def validate_content_metadata(metadata: dict[str, Any], source_path: Path) -> di
     if not isinstance(draft, bool):
         raise BuildError(f"{source_path}: draft must be true or false")
 
-    slug = metadata.get("slug", source_path.stem)
-    if not isinstance(slug, str) or not slug.strip():
+    raw_slug = metadata.get("slug", source_path.stem)
+    if not isinstance(raw_slug, str) or not raw_slug.strip():
         raise BuildError(f"{source_path}: slug must be a non-empty string")
+    slug = slugify(raw_slug)
+    if "/" in slug or "\\" in slug or slug in {".", ".."}:
+        raise BuildError(f"{source_path}: slug cannot include path separators")
 
     external_url = metadata.get("external_url")
     if external_url is not None and not isinstance(external_url, str):
@@ -250,11 +271,13 @@ def validate_content_metadata(metadata: dict[str, Any], source_path: Path) -> di
 
     return {
         "title": title.strip(),
+        "subtitle": subtitle.strip(),
+        "author": author.strip(),
         "date": date,
         "summary": summary.strip(),
         "tags": [tag.strip() for tag in tags if tag.strip()],
         "draft": draft,
-        "slug": slug.strip(),
+        "slug": slug,
         "external_url": external_url,
     }
 
@@ -265,6 +288,29 @@ def human_date(date_value: dt.date) -> str:
 
 def render_markdown(content: str) -> str:
     return markdown(content, extensions=["extra", "sane_lists", "toc"])
+
+
+def strip_html_tags(text: str) -> str:
+    without_tags = re.sub(r"<[^>]+>", " ", text)
+    normalized = re.sub(r"\s+", " ", without_tags)
+    return html.unescape(normalized).strip()
+
+
+def build_preview_text(summary: str, rendered_html: str, max_chars: int = 280) -> str:
+    source_text = summary or strip_html_tags(rendered_html)
+    if len(source_text) <= max_chars:
+        return source_text
+    clipped = source_text[:max_chars].rstrip()
+    if " " in clipped:
+        clipped = clipped.rsplit(" ", 1)[0]
+    return f"{clipped}..."
+
+
+def slugify(value: str) -> str:
+    normalized = value.strip().lower()
+    normalized = re.sub(r"[^a-z0-9]+", "-", normalized)
+    normalized = normalized.strip("-")
+    return normalized or "item"
 
 
 def load_markdown_file(path: Path) -> tuple[dict[str, Any], str]:
@@ -304,23 +350,37 @@ def load_section_items(
         if validated["draft"] and not include_drafts:
             continue
 
+        rendered_html = render_markdown(body)
+        read_path = f"reads/{validated['slug']}/" if section_name == "reads" else None
+
         items.append(
             ContentItem(
                 source_path=md_path,
                 title=validated["title"],
+                subtitle=validated["subtitle"],
+                author=validated["author"],
                 date=validated["date"],
                 date_display=human_date(validated["date"]),
                 summary=validated["summary"],
+                preview_text=build_preview_text(validated["summary"], rendered_html),
                 tags=validated["tags"],
                 draft=validated["draft"],
                 slug=validated["slug"],
                 external_url=validated["external_url"],
+                read_path=read_path,
                 body_markdown=body,
-                rendered_html=render_markdown(body),
+                rendered_html=rendered_html,
             )
         )
 
-    return sorted(items, key=lambda item: (-item.date.toordinal(), item.source_path.name.lower()))
+    sorted_items = sorted(items, key=lambda item: (-item.date.toordinal(), item.source_path.name.lower()))
+    if section_name == "reads":
+        seen_slugs: set[str] = set()
+        for item in sorted_items:
+            if item.slug in seen_slugs:
+                raise BuildError(f"Duplicate slug '{item.slug}' in section '{section_name}'")
+            seen_slugs.add(item.slug)
+    return sorted_items
 
 
 def validate_structure(config: SiteConfig) -> None:
@@ -416,6 +476,7 @@ def build_site(config: SiteConfig, include_drafts: bool, clean: bool, verbose: b
         print(f"Rendered {config.output_dir / 'index.html'}")
 
     section_template = env.get_template("section.html")
+    read_detail_template = env.get_template("read_detail.html")
     for section in SECTION_DEFS:
         items = load_section_items(config.content_dir, section["name"], include_drafts)
         section_html = section_template.render(
@@ -430,13 +491,17 @@ def build_site(config: SiteConfig, include_drafts: bool, clean: bool, verbose: b
             items=[
                 {
                     "title": item.title,
+                    "subtitle": item.subtitle,
+                    "author": item.author,
                     "date": item.date.isoformat(),
                     "date_display": item.date_display,
                     "summary": item.summary,
+                    "preview_text": item.preview_text,
                     "tags": item.tags,
                     "draft": item.draft,
                     "slug": item.slug,
                     "external_url": item.external_url,
+                    "read_path": item.read_path,
                     "rendered_html": item.rendered_html,
                 }
                 for item in items
@@ -446,6 +511,32 @@ def build_site(config: SiteConfig, include_drafts: bool, clean: bool, verbose: b
         write_text_file(output_path, section_html)
         if verbose:
             print(f"Rendered {output_path}")
+
+        if section["name"] == "reads":
+            for item in items:
+                if not item.read_path:
+                    continue
+                read_html = read_detail_template.render(
+                    page_title=item.title,
+                    current_section="reads",
+                    site=site_context,
+                    item={
+                        "title": item.title,
+                        "subtitle": item.subtitle,
+                        "author": item.author,
+                        "date": item.date.isoformat(),
+                        "date_display": item.date_display,
+                        "summary": item.summary,
+                        "tags": item.tags,
+                        "slug": item.slug,
+                        "rendered_html": item.rendered_html,
+                        "read_path": item.read_path,
+                    },
+                )
+                read_output_path = config.output_dir / "reads" / item.slug / "index.html"
+                write_text_file(read_output_path, read_html)
+                if verbose:
+                    print(f"Rendered {read_output_path}")
 
     copy_assets(config)
     if verbose:
