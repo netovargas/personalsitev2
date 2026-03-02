@@ -65,6 +65,7 @@ class ContentItem:
     title: str
     subtitle: str
     author: str
+    file_created_at: dt.datetime
     date: dt.date
     date_display: str
     summary: str
@@ -313,6 +314,15 @@ def slugify(value: str) -> str:
     return normalized or "item"
 
 
+def file_created_at(path: Path) -> dt.datetime:
+    stat_result = path.stat()
+    # macOS exposes real creation time as st_birthtime; fallback to mtime elsewhere.
+    created_ts = getattr(stat_result, "st_birthtime", None)
+    if created_ts is None:
+        created_ts = stat_result.st_mtime
+    return dt.datetime.fromtimestamp(created_ts, tz=dt.timezone.utc)
+
+
 def load_markdown_file(path: Path) -> tuple[dict[str, Any], str]:
     try:
         raw_text = path.read_text(encoding="utf-8")
@@ -359,6 +369,7 @@ def load_section_items(
                 title=validated["title"],
                 subtitle=validated["subtitle"],
                 author=validated["author"],
+                file_created_at=file_created_at(md_path),
                 date=validated["date"],
                 date_display=human_date(validated["date"]),
                 summary=validated["summary"],
@@ -373,7 +384,13 @@ def load_section_items(
             )
         )
 
-    sorted_items = sorted(items, key=lambda item: (-item.date.toordinal(), item.source_path.name.lower()))
+    if section_name == "reads":
+        sorted_items = sorted(
+            items,
+            key=lambda item: (-item.file_created_at.timestamp(), item.source_path.name.lower()),
+        )
+    else:
+        sorted_items = sorted(items, key=lambda item: (-item.date.toordinal(), item.source_path.name.lower()))
     if section_name == "reads":
         seen_slugs: set[str] = set()
         for item in sorted_items:
