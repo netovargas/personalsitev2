@@ -23,7 +23,7 @@
           {{ item.date_display }}
           {% if item.author %}&middot; by {{ item.author }}{% endif %}
         </p>
-        {% if item.summary %}
+        {% if section.name != "reads" and item.summary %}
         <p class="summary">{{ item.summary }}</p>
         {% endif %}
         {% if item.external_url %}

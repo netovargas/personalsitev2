@@ -11,9 +11,9 @@ tags:
   - magazine
 ---
 
-**The new alchemical dream is: changing one's personality-remaking, remodeling, elevating, and polishing one's very _self._**
-
 **_Editor's note:_** _This story first appeared in the August 23, 1976, issue of New York._
+
+**The new alchemical dream is: changing one's personality-remaking, remodeling, elevating, and polishing one's very _self._**
 
 The trainer said, "Take your finger off the repress button." Everybody was supposed to let go, let all the vile stuff come up and gush out. They even provided vomit bags, like the ones on a 747, in case you literally let it _gush out!_ Then the trainer told everybody to think of "the one thing you would most like to eliminate from your life." And so what does our girl blurt over the microphone?
 
