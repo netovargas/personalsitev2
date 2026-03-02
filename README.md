@@ -6,7 +6,7 @@ A markdown-driven static site generator for a personal website.
 
 The site is generated from markdown content and templates into static HTML for hosting on GitHub Pages, S3, or any static host.
 
-Generated output (under `site/`):
+Generated output (under `docs/`):
 
 - `index.html` (home)
 - `posts/index.html`
@@ -68,8 +68,10 @@ python scripts/build.py --clean --include-drafts --verbose
 
 ## Environment variables
 
-- `BASE_URL` (default `/`)
-  - Use this for project subpaths, for example `/<repo-name>/` on GitHub Pages project sites.
+- `BASE_URL` (optional override)
+  - If unset, the build script auto-detects:
+    - `/<repo-name>/` for project pages
+    - `/` for `<user>.github.io` repositories
 - `SITE_TITLE` (default `Ernesto Personal Website`)
 
 Example:
@@ -123,7 +125,7 @@ The home page content is read from `content/home.md`.
 
 ## Preview locally
 
-After building, open `site/index.html` in a browser.
+After building, open `docs/index.html` in a browser.
 
 ## Deploying with GitHub Pages
 
@@ -133,9 +135,9 @@ On pushes to `main`, it will:
 
 1. Install Python dependencies
 2. Run `python scripts/build.py --clean`
-3. Publish the `site/` directory to GitHub Pages
+3. Publish the `docs/` directory to GitHub Pages
 
-If this repository is a user/organization site (`<user>.github.io`), set `BASE_URL` to `/` in the workflow.
+The build script infers `BASE_URL` automatically from the repo name on GitHub Actions.
 
 ### Deploy script
 

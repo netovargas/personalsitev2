@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,7 +93,7 @@ def parse_args() -> argparse.Namespace:
 
 def build_config() -> SiteConfig:
     root_dir = Path(__file__).resolve().parent.parent
-    base_url = normalize_base_url(os.environ.get("BASE_URL", "/"))
+    base_url = resolve_base_url(root_dir)
     site_title = os.environ.get("SITE_TITLE", "Ernesto Personal Website")
 
     return SiteConfig(
@@ -104,6 +105,59 @@ def build_config() -> SiteConfig:
         site_title=site_title,
         base_url=base_url,
     )
+
+
+def resolve_base_url(root_dir: Path) -> str:
+    explicit_base_url = os.environ.get("BASE_URL")
+    if explicit_base_url:
+        return normalize_base_url(explicit_base_url)
+
+    github_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if github_repo:
+        return repo_slug_to_base_url(github_repo)
+
+    remote_repo = read_origin_repo_slug(root_dir)
+    if remote_repo:
+        return repo_slug_to_base_url(remote_repo)
+
+    return "/"
+
+
+def read_origin_repo_slug(root_dir: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root_dir), "config", "--get", "remote.origin.url"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return ""
+
+    origin_url = result.stdout.strip()
+    if not origin_url:
+        return ""
+
+    prefix_map = (
+        "git@github.com:",
+        "https://github.com/",
+        "ssh://git@github.com/",
+    )
+    for prefix in prefix_map:
+        if origin_url.startswith(prefix):
+            slug = origin_url[len(prefix) :]
+            return slug[:-4] if slug.endswith(".git") else slug
+
+    return ""
+
+
+def repo_slug_to_base_url(repo_slug: str) -> str:
+    repo_name = repo_slug.split("/")[-1].strip()
+    if not repo_name:
+        return "/"
+    if repo_name.endswith(".github.io"):
+        return "/"
+    return normalize_base_url(f"/{repo_name}/")
 
 
 def normalize_base_url(base_url: str) -> str:
