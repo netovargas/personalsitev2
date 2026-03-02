@@ -12,9 +12,6 @@
       {{ item.date_display }}
       {% if item.author %}&middot; by {{ item.author }}{% endif %}
     </p>
-    {% if item.summary %}
-    <p class="summary">{{ item.summary }}</p>
-    {% endif %}
   </header>
 
   <div class="prose">{{ item.rendered_html | safe }}</div>
